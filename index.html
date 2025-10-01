@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mindful Timer - Simple Meditation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 50px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-bottom: 40px;
+        }
+
+        .timer-display {
+            font-size: 5em;
+            font-weight: 200;
+            margin: 30px 0;
+            letter-spacing: 5px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .duration-selector {
+            margin: 30px 0;
+        }
+
+        .duration-selector label {
+            display: block;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .duration-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .duration-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .duration-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .duration-btn.active {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: white;
+            font-weight: bold;
+        }
+
+        .controls {
+            margin-top: 40px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .control-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .control-btn.reset {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+        }
+
+        .status {
+            margin-top: 25px;
+            font-size: 1.2em;
+            opacity: 0.8;
+            min-height: 30px;
+        }
+
+        .breath-guide {
+            margin-top: 30px;
+            font-size: 1.3em;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .breath-guide.show {
+            opacity: 1;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .breathing {
+            animation: pulse 4s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧘 Mindful Timer</h1>
+        <p class="subtitle">Find your peace, one breath at a time</p>
+
+        <div class="timer-display" id="timerDisplay">05:00</div>
+
+        <div class="duration-selector">
+            <label>Choose your duration:</label>
+            <div class="duration-buttons">
+                <button class="duration-btn" data-minutes="1">1 min</button>
+                <button class="duration-btn active" data-minutes="5">5 min</button>
+                <button class="duration-btn" data-minutes="10">10 min</button>
+                <button class="duration-btn" data-minutes="15">15 min</button>
+                <button class="duration-btn" data-minutes="20">20 min</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" id="startBtn">Start</button>
+            <button class="control-btn reset" id="resetBtn">Reset</button>
+        </div>
+
+        <div class="status" id="status">Ready to begin</div>
+        <div class="breath-guide" id="breathGuide">Breathe...</div>
+    </div>
+
+    <script>
+        // Get all the elements we need to work with
+        const timerDisplay = document.getElementById('timerDisplay');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const status = document.getElementById('status');
+        const breathGuide = document.getElementById('breathGuide');
+        const durationButtons = document.querySelectorAll('.duration-btn');
+
+        // Variables to track timer state
+        let totalSeconds = 300; // Default 5 minutes
+        let remainingSeconds = totalSeconds;
+        let timerInterval = null;
+        let isRunning = false;
+
+        // Function to format seconds into MM:SS
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        // Function to update the display
+        function updateDisplay() {
+            timerDisplay.textContent = formatTime(remainingSeconds);
+        }
+
+        // Function to play a gentle completion sound
+        function playCompletionSound() {
+            // Create a simple pleasant tone using Web Audio API
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 528; // 528 Hz - "Love frequency"
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 1.5);
+        }
+
+        // Function to start or pause the timer
+        function toggleTimer() {
+            if (isRunning) {
+                // Pause the timer
+                clearInterval(timerInterval);
+                isRunning = false;
+                startBtn.textContent = 'Resume';
+                status.textContent = 'Paused';
+                breathGuide.classList.remove('show', 'breathing');
+            } else {
+                // Start the timer
+                isRunning = true;
+                startBtn.textContent = 'Pause';
+                status.textContent = 'Meditation in progress...';
+                breathGuide.classList.add('show', 'breathing');
+                
+                timerInterval = setInterval(() => {
+                    remainingSeconds--;
+                    updateDisplay();
+                    
+                    // Check if timer is complete
+                    if (remainingSeconds <= 0) {
+                        clearInterval(timerInterval);
+                        isRunning = false;
+                        startBtn.textContent = 'Start';
+                        status.textContent = '✨ Session complete! Well done.';
+                        breathGuide.classList.remove('show', 'breathing');
+                        playCompletionSound();
+                    }
+                }, 1000);
+            }
+        }
+
+        // Function to reset the timer
+        function resetTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            remainingSeconds = totalSeconds;
+            updateDisplay();
+            startBtn.textContent = 'Start';
+            status.textContent = 'Ready to begin';
+            breathGuide.classList.remove('show', 'breathing');
+        }
+
+        // Function to set duration
+        function setDuration(minutes) {
+            // Only allow changing duration if timer isn't running
+            if (!isRunning) {
+                totalSeconds = minutes * 60;
+                remainingSeconds = totalSeconds;
+                updateDisplay();
+                status.textContent = 'Ready to begin';
+                
+                // Update active button style
+                durationButtons.forEach(btn => btn.classList.remove('active'));
+                event.target.classList.add('active');
+            }
+        }
+
+        // Event listeners
+        startBtn.addEventListener('click', toggleTimer);
+        resetBtn.addEventListener('click', resetTimer);
+
+        // Add click event to each duration button
+        durationButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const minutes = parseInt(btn.getAttribute('data-minutes'));
+                setDuration(minutes);
+            });
+        });
+
+        // Initialize display
+        updateDisplay();
+    </script>
+</body>
+</html>
